@@ -330,8 +330,8 @@ function displayReply(reply) {
   const replyLang = containsChinese(reply.body) ? 'zh-CN' : 'en';
 
   replyDate.textContent       = reply.date;
-  replyTo.textContent         = `To: ${reply.userName}`;
-  replyFrom.textContent       = `From: ${reply.to}`;
+  replyTo.textContent         = reply.userName;
+  replyFrom.textContent       = reply.to;
   replySalutation.textContent = reply.salutation;
   replyBody.textContent       = '';
   replyBody.lang              = replyLang;

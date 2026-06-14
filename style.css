@@ -482,33 +482,63 @@ details[open] .voice-ref-toggle::before { transform: rotate(90deg); }
 #replySection { animation: replyAppear 0.9s ease-out both; }
 
 .reply-paper {
-  padding: 2.8rem 3rem;
-  background: rgba(219, 196, 165, 0.18);
+  padding: 3rem 3.5rem 3.5rem;
+  background-color: #FBF4E8;
+  background-image:
+    radial-gradient(ellipse at 16% 10%, rgba(219, 196, 165, 0.28) 0%, transparent 55%),
+    radial-gradient(ellipse at 84% 82%, rgba(160, 134, 112, 0.11) 0%, transparent 50%),
+    repeating-linear-gradient(
+      -48deg,
+      transparent 0px,
+      transparent 22px,
+      rgba(160, 134, 112, 0.018) 22px,
+      rgba(160, 134, 112, 0.018) 23px
+    ),
+    repeating-linear-gradient(
+      40deg,
+      transparent 0px,
+      transparent 30px,
+      rgba(160, 134, 112, 0.010) 30px,
+      rgba(160, 134, 112, 0.010) 31px
+    );
+  border-color: rgba(160, 134, 112, 0.20);
+  box-shadow:
+    0 2px 6px rgba(68, 50, 35, 0.10),
+    0 8px 32px rgba(68, 50, 35, 0.13),
+    0 30px 72px rgba(68, 50, 35, 0.17),
+    inset 0 0 90px rgba(219, 196, 165, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.62),
+    inset 0 -1px 0 rgba(68, 50, 35, 0.04);
 }
 
 .reply-date-line {
   text-align: right;
   font-family: var(--font-literary-ui);
-  font-size: 0.9rem;
-  color: var(--weathered);
-  margin-bottom: 1.4rem;
+  font-style: italic;
+  font-size: 0.92rem;
+  color: var(--clockwork);
+  margin-bottom: 1.8rem;
 }
 
 .reply-address-block {
   display: flex;
   flex-direction: column;
-  gap: 0.22rem;
-  margin-bottom: 1.8rem;
+  gap: 0.12rem;
+  margin-bottom: 2rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(160, 134, 112, 0.18);
   font-family: var(--font-literary-ui);
-  font-size: 0.95rem;
+  font-size: 0.75rem;
+  font-style: italic;
   color: var(--weathered);
+  opacity: 0.78;
 }
 
 .reply-salutation {
   font-family: var(--font-letter);
-  font-size: 1.1rem;
+  font-size: 1.12rem;
   color: var(--cafe-noir);
-  margin-bottom: 1.1rem;
+  margin-bottom: 1.3rem;
 }
 
 .reply-body {
@@ -538,10 +568,10 @@ details[open] .voice-ref-toggle::before { transform: rotate(90deg); }
 }
 
 .reply-sig {
-  margin-top: 2.2rem;
+  margin-top: 2.6rem;
   font-family: var(--font-letter);
   font-style: italic;
-  font-size: 1.05rem;
+  font-size: 1.1rem;
   color: var(--clockwork);
   transition: opacity 0.7s ease;
 }
