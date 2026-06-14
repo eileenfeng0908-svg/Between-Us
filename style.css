@@ -21,7 +21,7 @@
   --paper-ink:    var(--linen);
 
   --ink:             var(--cafe-noir);
-  --heading:         var(--cafe-noir);
+  --heading:         var(--clockwork);
   --muted:           var(--weathered);
   --accent:          var(--mauve);
   --accent-readable: var(--mauve);
@@ -102,7 +102,7 @@ select:focus-visible {
   font-family: var(--font-literary-ui);
   font-size: 2.2rem;
   font-weight: 400;
-  color: var(--cafe-noir);
+  color: var(--clockwork);
   letter-spacing: 0.01em;
 }
 
@@ -137,7 +137,7 @@ select:focus-visible {
   padding: 0;
   transition: color 0.2s;
 }
-.nav-btn:hover { color: var(--cafe-noir); }
+.nav-btn:hover { color: var(--mauve); }
 
 /* --- Name prompt ------------------------------------- */
 
@@ -162,7 +162,7 @@ select:focus-visible {
   font-family: var(--font-literary-ui);
   font-size: 1.55rem;
   font-weight: 400;
-  color: var(--cafe-noir);
+  color: var(--clockwork);
   display: block;
 }
 
@@ -483,6 +483,7 @@ details[open] .voice-ref-toggle::before { transform: rotate(90deg); }
 
 .reply-paper {
   padding: 2.8rem 3rem;
+  background: rgba(219, 196, 165, 0.18);
 }
 
 .reply-date-line {
@@ -840,6 +841,15 @@ details[open] .voice-ref-toggle::before { transform: rotate(90deg); }
   clip-path: polygon(0 0, 100% 0, 50% 100%);
 }
 
+.loading-envelope .env-lid {
+  background: #B5A880;
+}
+
+.loading-envelope .env-postmark {
+  color: var(--deep-olive);
+  letter-spacing: 0.12em;
+}
+
 .loading-envelope .env-address {
   padding-bottom: 0.9rem;
 }
@@ -1072,6 +1082,7 @@ details[open] .voice-ref-toggle::before { transform: rotate(90deg); }
 
 .corr-paper {
   padding: 2.5rem 3rem;
+  background: rgba(219, 196, 165, 0.15);
   box-shadow:
     0 1px 3px rgba(68, 50, 35, 0.08),
     0 5px 18px rgba(68, 50, 35, 0.08),
