@@ -52,9 +52,11 @@ const corrBack        = $('corrBack');
 const corrExchange    = $('corrExchange');
 
 // ---- Persistence keys ------------------------------------------------
+// Username: sessionStorage so it doesn't persist on shared devices.
+// Language: localStorage — it's a UI preference, not personal content.
+// Letters: not stored on this device. See db.js.
 
-const USER_KEY    = 'letterback_username';
-const ARCHIVE_KEY = 'letterback_v2';
+const USER_KEY     = 'betweenus_username';
 const LANGUAGE_KEY = 'betweenus_reply_language';
 
 let currentReplyText = '';
@@ -73,11 +75,11 @@ let correspondenceOpenRun = 0;
 // ---- Username --------------------------------------------------------
 
 function getUserName() {
-  return localStorage.getItem(USER_KEY) || '';
+  return sessionStorage.getItem(USER_KEY) || '';
 }
 
 function setUserName(name) {
-  localStorage.setItem(USER_KEY, name.trim());
+  sessionStorage.setItem(USER_KEY, name.trim());
 }
 
 // ---- Navigation ------------------------------------------------------
@@ -92,6 +94,12 @@ function showSection(name, scrollBehavior = 'auto') {
 // ---- Init ------------------------------------------------------------
 
 function init() {
+  // Clear any letter data left by older versions of this app
+  try {
+    localStorage.removeItem('letterback_v2');
+    localStorage.removeItem('letterback_username');
+  } catch {}
+
   currentReading = createReadingController(
     currentReadControls,
     () => currentReplyText,
@@ -233,14 +241,14 @@ function handleSend() {
     }
 
     const preview = extractPreview(reply.body);
-    saveToArchive({
-      date:           reply.date,
+    await saveToArchive({
+      date:            reply.date,
       to,
-      userName:       reply.userName || userName,
-      original:       text,
+      userName:        reply.userName || userName,
+      original:        text,
       preview,
-      replyBody:      reply.body,
-      replySignature: reply.signature,
+      replyBody:       reply.body,
+      replySignature:  reply.signature,
       replySalutation: reply.salutation,
       language,
     });
@@ -668,31 +676,21 @@ function extractPreview(body) {
   return sentence.length > 88 ? sentence.slice(0, 88).trimEnd() + '…' : sentence;
 }
 
-// ---- Archive (localStorage) -----------------------------------------
+// ---- Archive (session memory — see db.js) ---------------------------
 
-function saveToArchive(entry) {
-  try {
-    const archive = loadArchive();
-    archive.unshift(entry);
-    localStorage.setItem(ARCHIVE_KEY, JSON.stringify(archive));
-  } catch {
-    // localStorage unavailable; archive won't persist this session
-  }
+async function saveToArchive(entry) {
+  await BetweenUsDB.saveLetter(entry);
 }
 
-function loadArchive() {
-  try {
-    return JSON.parse(localStorage.getItem(ARCHIVE_KEY)) || [];
-  } catch {
-    return [];
-  }
+async function loadArchive() {
+  return BetweenUsDB.loadLetters();
 }
 
-function renderArchive() {
-  const archive = loadArchive();
+async function renderArchive() {
+  const archive = await loadArchive();
   archiveList.innerHTML = '';
 
-  if (archive.length === 0) {
+if (archive.length === 0) {
     archiveEmpty.classList.remove('hidden');
     return;
   }

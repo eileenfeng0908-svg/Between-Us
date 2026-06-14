@@ -153,7 +153,10 @@
         <button class="nav-btn" id="archiveClose">Back</button>
       </div>
       <div id="archiveList"></div>
-      <p id="archiveEmpty" class="archive-empty hidden">The archive is empty.</p>
+      <div id="archiveEmpty" class="archive-empty hidden">
+        <p>No letters saved in this session.</p>
+        <p class="archive-empty-note">Sign in support is coming later.</p>
+      </div>
     </section>
 
     <!-- Correspondence (single exchange view) -->
@@ -165,6 +168,7 @@
     </section>
 
   </div>
+  <script src="db.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

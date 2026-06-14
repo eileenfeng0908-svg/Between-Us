@@ -1018,6 +1018,14 @@ details[open] .voice-ref-toggle::before { transform: rotate(90deg); }
   text-align: center;
   padding: 3rem 0;
   grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.archive-empty-note {
+  font-size: 0.82rem;
+  opacity: 0.6;
 }
 
 /* --- Correspondence view ----------------------------- */
