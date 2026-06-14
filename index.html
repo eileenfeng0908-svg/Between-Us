@@ -107,6 +107,21 @@
         <button id="skipTypingBtn" type="button">Skip</button>
       </div>
 
+      <!-- Write back button (revealed when reply is ready) -->
+      <button class="write-back-btn hidden" id="writeBackBtn">Write back</button>
+
+      <!-- Write back compose (shown when "Write back" is clicked) -->
+      <div id="writeBackCompose" class="write-back-compose hidden">
+        <div class="stationery write-back-stationery">
+          <div class="write-back-header">
+            <span class="field-label">To</span>
+            <span id="writeBackTo" class="write-back-to"></span>
+          </div>
+          <textarea id="writeBackBody" class="letter-textarea" placeholder="Continue your letter…"></textarea>
+        </div>
+        <button class="send-btn" id="writeBackSendBtn">Send this letter</button>
+      </div>
+
       <!-- Read aloud (always tracks the latest reply) -->
       <div class="read-letter" id="currentReadControls">
         <p class="read-letter-label">Read this letter in a voice</p>
@@ -140,23 +155,8 @@
         <audio class="letter-audio hidden" id="letterAudio" controls preload="none"></audio>
       </div>
 
-      <!-- Write back compose (shown when "Write back" is clicked) -->
-      <div id="writeBackCompose" class="write-back-compose hidden">
-        <div class="stationery write-back-stationery">
-          <div class="write-back-header">
-            <span class="field-label">To</span>
-            <span id="writeBackTo" class="write-back-to"></span>
-          </div>
-          <textarea id="writeBackBody" class="letter-textarea" placeholder="Continue your letter…"></textarea>
-        </div>
-        <button class="send-btn" id="writeBackSendBtn">Send this letter</button>
-      </div>
-
-      <!-- Footer actions -->
-      <div class="reply-section-footer">
-        <button class="write-back-btn hidden" id="writeBackBtn">Write back</button>
-        <button class="send-btn secondary" id="writeAnotherBtn">Write another letter</button>
-      </div>
+      <!-- Footer -->
+      <button class="send-btn secondary" id="writeAnotherBtn">Write another letter</button>
     </section>
 
     <!-- Archive -->

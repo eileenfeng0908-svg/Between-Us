@@ -495,6 +495,13 @@ function finishReplyTyping(text) {
   isReplyTyping = false;
   replyTypingTimer = null;
   hideTypingSkip();
+
+  // Scroll the "Write back" button into view once the letter is fully read
+  if (!writeBackBtn.classList.contains('hidden')) {
+    setTimeout(() => {
+      writeBackBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 500);
+  }
 }
 
 function stopReplyTyping() {
