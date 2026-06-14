@@ -31,18 +31,18 @@ const sendingCaption  = $('sendingCaption');
 const sendingEnvelopeTo = $('sendingEnvelopeTo');
 const sendingEnvelopeFrom = $('sendingEnvelopeFrom');
 
-const replyDate       = $('replyDate');
-const replyTo         = $('replyTo');
-const replyFrom       = $('replyFrom');
-const replySalutation = $('replySalutation');
-const replyBody       = $('replyBody');
-const replySig        = $('replySig');
+const threadContainer = $('threadContainer');
 const typingSkip      = $('typingSkip');
 const skipTypingBtn   = $('skipTypingBtn');
 const readAloudBtn    = $('readAloudBtn');
 const currentReadControls = $('currentReadControls');
 
-const writeAnotherBtn = $('writeAnotherBtn');
+const writeBackCompose  = $('writeBackCompose');
+const writeBackTo       = $('writeBackTo');
+const writeBackBody     = $('writeBackBody');
+const writeBackSendBtn  = $('writeBackSendBtn');
+const writeBackBtn      = $('writeBackBtn');
+const writeAnotherBtn   = $('writeAnotherBtn');
 const archiveToggle   = $('archiveToggle');
 const archiveClose    = $('archiveClose');
 const archiveList     = $('archiveList');
@@ -63,6 +63,8 @@ let currentReplyText = '';
 let replyTypingTimer = null;
 let replyTypingRun = 0;
 let activeReplyBody = '';
+let activeTypingBodyEl = null;
+let activeTypingSigEl = null;
 let isReplyTyping = false;
 let activeReading = null;
 let currentReading = null;
@@ -71,6 +73,8 @@ let sendAnimationTimers = [];
 let sendRun = 0;
 let correspondenceOpenTimers = [];
 let correspondenceOpenRun = 0;
+let conversationThread = [];
+let currentConversation = { to: '', userName: '', language: '', voiceRef: '' };
 
 // ---- Username --------------------------------------------------------
 
@@ -138,6 +142,8 @@ skipTypingBtn.addEventListener('click', skipReplyTyping);
 document.addEventListener('keydown', handleTypingShortcut);
 
 writeAnotherBtn.addEventListener('click', resetToFreshDesk);
+writeBackBtn.addEventListener('click', handleWriteBack);
+writeBackSendBtn.addEventListener('click', handleWriteBackSend);
 
 archiveToggle.addEventListener('click', () => {
   cancelCorrespondenceOpening();
@@ -171,13 +177,18 @@ function resetToFreshDesk() {
   voiceRef.value = '';
   voiceRef.closest('details')?.removeAttribute('open');
 
-  replyDate.textContent = '';
-  replyTo.textContent = '';
-  replyFrom.textContent = '';
-  replySalutation.textContent = '';
-  replyBody.textContent = '';
-  replySig.textContent = '';
-  replySig.classList.remove('awaiting-signature');
+  // Clear conversation thread
+  threadContainer.innerHTML = '';
+  conversationThread = [];
+  currentConversation = { to: '', userName: '', language: '', voiceRef: '' };
+  writeBackCompose.classList.add('hidden');
+  writeBackCompose.classList.remove('entering');
+  writeBackBtn.classList.add('hidden');
+  writeBackBody.value = '';
+
+  // Restore entry animation for the next first-show
+  sections.reply.classList.remove('no-entry-anim');
+
   typingSkip.classList.add('hidden');
   corrExchange.innerHTML = '';
 
@@ -203,15 +214,21 @@ function handleSend() {
   const run = ++sendRun;
   sendAbortController = new AbortController();
 
-  // Start API call immediately so it runs in parallel with the 3.8s animation
+  // Start API call immediately so it runs in parallel with the animation
   const replyPromise = fetchReply({
     to,
     userName,
     text,
     voiceRef: voice,
     language,
+    history: [],
     signal: sendAbortController.signal,
   }).catch(() => null);
+
+  // Reset thread for a fresh conversation
+  conversationThread = [];
+  threadContainer.innerHTML = '';
+  sections.reply.classList.remove('no-entry-anim');
 
   showSection('sending');
   resetAnimations();
@@ -219,15 +236,15 @@ function handleSend() {
   runSendAnimation(async () => {
     if (run !== sendRun) return;
 
-    let reply;
-
     const apiData = await replyPromise;
     if (run !== sendRun) return;
 
+    const date = new Date().toLocaleDateString('en-US', {
+      year: 'numeric', month: 'long', day: 'numeric',
+    });
+
+    let reply;
     if (apiData && apiData.body) {
-      const date = new Date().toLocaleDateString('en-US', {
-        year: 'numeric', month: 'long', day: 'numeric',
-      });
       reply = {
         date,
         to,
@@ -252,7 +269,20 @@ function handleSend() {
       replySalutation: reply.salutation,
       language,
     });
-    displayReply(reply);
+
+    // Track conversation state
+    currentConversation = { to, userName, language, voiceRef: voice };
+    conversationThread = [
+      { role: 'user', text },
+      { role: 'assistant', text: reply.body },
+    ];
+
+    // Fade out "Delivered.", then bridge to "A letter has returned."
+    sendingCaption.style.opacity = '0';
+    await new Promise(resolve => {
+      sendAnimationTimers.push(setTimeout(resolve, 550));
+    });
+    if (run !== sendRun) return;
 
     sendingCaption.textContent = 'A letter has returned.';
     sendingCaption.style.opacity = '1';
@@ -262,17 +292,22 @@ function handleSend() {
     });
     if (run !== sendRun) return;
 
+    // Append exchange to thread, start typing timer
+    const sentData = { to, userName, body: text, date: reply.date };
+    displayReply(sentData, reply);
+
     showSection('reply');
+    writeBackBtn.classList.remove('hidden');
     sendAbortController = null;
   });
 }
 
-async function fetchReply({ to, userName, text, voiceRef, language, signal }) {
+async function fetchReply({ to, userName, text, voiceRef, language, history = [], signal }) {
   const res = await fetch('/reply', {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
     signal,
-    body:    JSON.stringify({ to, userName, text, voiceRef, language }),
+    body:    JSON.stringify({ to, userName, text, voiceRef, language, history }),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
@@ -320,6 +355,11 @@ function runSendAnimation(onComplete) {
     sendingCaption.style.opacity = '0';
   }, 2900));
 
+  sendAnimationTimers.push(setTimeout(() => {
+    sendingCaption.textContent = 'Delivered.';
+    sendingCaption.style.opacity = '1';
+  }, 3300));
+
   sendAnimationTimers.push(setTimeout(onComplete, 3600));
 }
 
@@ -337,24 +377,17 @@ function cancelPendingSend() {
 
 // ---- Reply display ---------------------------------------------------
 
-function displayReply(reply) {
+function displayReply(sentData, reply) {
   stopReplyTyping();
   const replyLang = containsChinese(reply.body) ? 'zh-CN' : 'en';
-
-  replyDate.textContent       = reply.date;
-  replyTo.textContent         = `To: ${reply.userName}`;
-  replyFrom.textContent       = `From: ${reply.to}`;
-  replySalutation.textContent = reply.salutation;
-  replyBody.textContent       = '';
-  replyBody.lang              = replyLang;
-  replySig.textContent        = reply.signature;
-  replySig.lang               = replyLang;
-  replySalutation.lang        = replyLang;
-  replySig.classList.add('awaiting-signature');
   activeReplyBody = reply.body;
   currentReplyText = `${reply.salutation}\n\n${reply.body}\n\n${reply.signature}`;
   resetReading(false);
   readAloudBtn.disabled = true;
+
+  const { bodyEl, sigEl } = appendExchange(sentData, reply, replyLang);
+  activeTypingBodyEl = bodyEl;
+  activeTypingSigEl  = sigEl;
 
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     finishReplyTyping(reply.body);
@@ -363,9 +396,55 @@ function displayReply(reply) {
 
   const run = ++replyTypingRun;
   isReplyTyping = true;
-  replyBody.classList.add('is-typing');
+  bodyEl.classList.add('is-typing');
   typingSkip.classList.remove('hidden', 'is-leaving');
   replyTypingTimer = setTimeout(() => typeReplyBody(reply.body, run), 520);
+}
+
+function appendExchange(sentData, reply, replyLang) {
+  const exchange = document.createElement('div');
+  exchange.className = 'thread-exchange';
+
+  // Sent card (user's letter)
+  const sentCard = document.createElement('div');
+  sentCard.className = 'stationery sent-letter';
+  sentCard.innerHTML = `
+    <div class="sent-letter-header">
+      <span class="sent-letter-to">To: ${esc(sentData.to)}</span>
+      <span class="sent-letter-date">${esc(sentData.date)}</span>
+    </div>
+    <div class="sent-letter-body">${esc(sentData.body)}</div>
+  `;
+  exchange.appendChild(sentCard);
+
+  // Separator
+  const sep = document.createElement('div');
+  sep.className = 'thread-sep';
+  sep.innerHTML = '<span class="thread-sep-dot"></span>';
+  exchange.appendChild(sep);
+
+  // Reply card
+  const replyCard = document.createElement('div');
+  replyCard.className = 'stationery reply-paper';
+  replyCard.innerHTML = `
+    <div class="reply-header">
+      <div class="reply-address-block">
+        <span>To: ${esc(reply.userName)}</span>
+        <span>From: ${esc(reply.to)}</span>
+      </div>
+      <div class="reply-date-line">${esc(reply.date)}</div>
+    </div>
+    <div class="reply-salutation" lang="${replyLang}">${esc(reply.salutation)}</div>
+    <div class="reply-body" lang="${replyLang}"></div>
+    <div class="reply-sig awaiting-signature" lang="${replyLang}">${esc(reply.signature)}</div>
+  `;
+  exchange.appendChild(replyCard);
+  threadContainer.appendChild(exchange);
+
+  return {
+    bodyEl: replyCard.querySelector('.reply-body'),
+    sigEl:  replyCard.querySelector('.reply-sig'),
+  };
 }
 
 function typeReplyBody(text, run) {
@@ -381,7 +460,7 @@ function typeReplyBody(text, run) {
     if (run !== replyTypingRun) return;
 
     const character = characters[index];
-    replyBody.textContent += character;
+    activeTypingBodyEl.textContent += character;
     index += 1;
 
     if (index >= characters.length) {
@@ -405,9 +484,13 @@ function typingDelay(character) {
 function finishReplyTyping(text) {
   replyTypingRun += 1;
   clearTimeout(replyTypingTimer);
-  replyBody.textContent = text;
-  replyBody.classList.remove('is-typing');
-  replySig.classList.remove('awaiting-signature');
+  if (activeTypingBodyEl) {
+    activeTypingBodyEl.textContent = text;
+    activeTypingBodyEl.classList.remove('is-typing');
+  }
+  if (activeTypingSigEl) {
+    activeTypingSigEl.classList.remove('awaiting-signature');
+  }
   readAloudBtn.disabled = false;
   isReplyTyping = false;
   replyTypingTimer = null;
@@ -420,9 +503,126 @@ function stopReplyTyping() {
   replyTypingTimer = null;
   isReplyTyping = false;
   activeReplyBody = '';
-  replyBody.classList.remove('is-typing');
+  if (activeTypingBodyEl) activeTypingBodyEl.classList.remove('is-typing');
+  activeTypingBodyEl = null;
+  activeTypingSigEl  = null;
   typingSkip.classList.add('hidden');
   typingSkip.classList.remove('is-leaving');
+}
+
+// ---- Write back ------------------------------------------------------
+
+function handleWriteBack() {
+  writeBackBtn.classList.add('hidden');
+  writeBackTo.textContent = currentConversation.to;
+  writeBackCompose.classList.remove('hidden', 'entering');
+  void writeBackCompose.offsetWidth;
+  writeBackCompose.classList.add('entering');
+  setTimeout(() => writeBackBody.focus(), 50);
+}
+
+function handleWriteBackSend() {
+  const text = writeBackBody.value.trim();
+  if (!text) { writeBackBody.focus(); return; }
+
+  const { to, userName, language, voiceRef: voice } = currentConversation;
+
+  sendingEnvelopeTo.textContent = to;
+  sendingEnvelopeFrom.textContent = `from ${userName}`;
+
+  cancelPendingSend();
+  const run = ++sendRun;
+  sendAbortController = new AbortController();
+
+  const replyPromise = fetchReply({
+    to,
+    userName,
+    text,
+    voiceRef: voice,
+    language,
+    history: [...conversationThread],
+    signal: sendAbortController.signal,
+  }).catch(() => null);
+
+  showSection('sending');
+  resetAnimations();
+
+  runSendAnimation(async () => {
+    if (run !== sendRun) return;
+
+    const apiData = await replyPromise;
+    if (run !== sendRun) return;
+
+    const date = new Date().toLocaleDateString('en-US', {
+      year: 'numeric', month: 'long', day: 'numeric',
+    });
+
+    let reply;
+    if (apiData && apiData.body) {
+      reply = {
+        date,
+        to,
+        userName,
+        salutation: apiData.salutation || defaultSalutation(userName, language),
+        body:       apiData.body,
+        signature:  apiData.signature || defaultSignature(to, language),
+      };
+    } else {
+      reply = generateReply({ to, userName, text, voiceRef: voice, language });
+    }
+
+    const preview = extractPreview(reply.body);
+    await saveToArchive({
+      date:            reply.date,
+      to,
+      userName,
+      original:        text,
+      preview,
+      replyBody:       reply.body,
+      replySignature:  reply.signature,
+      replySalutation: reply.salutation,
+      language,
+    });
+
+    // Extend conversation history
+    conversationThread.push({ role: 'user', text });
+    conversationThread.push({ role: 'assistant', text: reply.body });
+
+    // Fade out "Delivered.", bridge to "A letter has returned."
+    sendingCaption.style.opacity = '0';
+    await new Promise(resolve => {
+      sendAnimationTimers.push(setTimeout(resolve, 550));
+    });
+    if (run !== sendRun) return;
+
+    sendingCaption.textContent = 'A letter has returned.';
+    sendingCaption.style.opacity = '1';
+
+    await new Promise(resolve => {
+      sendAnimationTimers.push(setTimeout(resolve, 1600));
+    });
+    if (run !== sendRun) return;
+
+    // Append new exchange to thread, start typing
+    const sentData = { to, userName, body: text, date: reply.date };
+    displayReply(sentData, reply);
+
+    writeBackBody.value = '';
+
+    // Return to reply section (suppress entry animation, scroll to new exchange)
+    sections.reply.classList.add('no-entry-anim');
+    sections.sending.classList.add('hidden');
+    sections.reply.classList.remove('hidden');
+
+    writeBackCompose.classList.add('hidden');
+    writeBackCompose.classList.remove('entering');
+    writeBackBtn.classList.remove('hidden');
+    sendAbortController = null;
+
+    setTimeout(() => {
+      threadContainer.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 200);
+  });
 }
 
 function skipReplyTyping() {

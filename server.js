@@ -58,7 +58,7 @@ const EMOTIONS = {
 };
 
 app.post('/reply', async (req, res) => {
-  const { to, userName, text, voiceRef, language = 'auto' } = req.body;
+  const { to, userName, text, voiceRef, language = 'auto', history = [] } = req.body;
 
   if (!to || !text) {
     return res.status(400).json({ error: 'Missing required fields' });
@@ -69,13 +69,24 @@ app.post('/reply', async (req, res) => {
   }
 
   const name = userName || 'you';
+
+  // Sanitise history: accept only user/assistant turns, cap at 20 entries, 2000 chars each
+  const safeHistory = Array.isArray(history)
+    ? history
+        .filter(h => h && ['user', 'assistant'].includes(h.role) && typeof h.text === 'string')
+        .slice(0, 20)
+        .map(h => ({ role: h.role, content: String(h.text).slice(0, 2000) }))
+    : [];
+
+  const hasHistory = safeHistory.length > 0;
+
   const languageInstruction = {
     auto: `Determine the main language of the original letter and reply in that language. If it mixes Chinese and English, choose the language that feels most emotionally natural for this particular correspondence. Do not translate the original letter. Preserve every name exactly as written.`,
     english: `Write the entire reply in natural English. Do not translate or alter names. The English should feel like genuine personal correspondence, never AI assistance or therapy language.`,
     chinese: `请用自然、含蓄、有文学感的中文写整封回信。不要写成英文翻译腔，不要改写或翻译任何姓名。语气应像真实而私人的书信，而不是人工智能、客服或心理咨询。`,
   }[language];
 
-  const systemPrompt = `You are ${to}. You have received a handwritten letter from ${name} and you are writing back.
+  const systemPrompt = `You are ${to}. You have received a handwritten letter from ${name} and you are writing back.${hasHistory ? ' This is an ongoing correspondence — you have already exchanged letters.' : ''}
 
 Write a reply letter in your authentic voice as ${to}. The reply must feel like it genuinely comes from ${to} — not from an AI, not from a therapist, not from a self-help book.
 
@@ -105,6 +116,7 @@ Return ONLY a JSON object in exactly this format:
       model: 'gpt-4o',
       messages: [
         { role: 'system', content: systemPrompt },
+        ...safeHistory,
         { role: 'user', content: text },
       ],
       response_format: { type: 'json_object' },

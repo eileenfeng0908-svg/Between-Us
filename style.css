@@ -488,6 +488,155 @@ details[open] .voice-ref-toggle::before { transform: rotate(90deg); }
 }
 
 #replySection { animation: replyAppear 1.4s cubic-bezier(0.16, 1, 0.3, 1) both; }
+#replySection.no-entry-anim { animation: none; }
+
+/* --- Thread container -------------------------------- */
+
+.thread-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.thread-exchange {
+  display: flex;
+  flex-direction: column;
+}
+
+.thread-exchange + .thread-exchange {
+  margin-top: 2rem;
+  padding-top: 2.5rem;
+  border-top: 1px solid var(--border);
+}
+
+/* Sent letter (user's outgoing card) */
+
+.sent-letter {
+  position: relative;
+}
+
+.sent-letter::before {
+  content: 'Your letter';
+  display: block;
+  font-family: var(--font-ui);
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-meta);
+  opacity: 0.65;
+  margin-bottom: 1.4rem;
+}
+
+.sent-letter-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding-bottom: 0.85rem;
+  margin-bottom: 1.4rem;
+  border-bottom: 1px solid var(--rule);
+  font-family: var(--font-literary-ui);
+  font-size: 0.8rem;
+  color: var(--ink-meta);
+  opacity: 0.85;
+}
+
+.sent-letter-body {
+  font-family: var(--font-letter);
+  font-size: 1.08rem;
+  line-height: 1.88;
+  color: var(--ink);
+  white-space: pre-line;
+  overflow-wrap: break-word;
+}
+
+/* Separator between sent and reply within an exchange */
+
+.thread-sep {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.75rem 0;
+  gap: 0.7rem;
+}
+
+.thread-sep::before,
+.thread-sep::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--rule);
+}
+
+.thread-sep-dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--ink-meta);
+  opacity: 0.45;
+}
+
+/* --- Write back compose ------------------------------ */
+
+@keyframes writeBackAppear {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.write-back-compose.entering {
+  animation: writeBackAppear 0.5s ease-out both;
+}
+
+.write-back-stationery {
+  padding-bottom: 0;
+}
+
+.write-back-header {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1.5rem;
+}
+
+.write-back-to {
+  font-family: var(--font-literary-ui);
+  font-size: 1rem;
+  color: var(--ink);
+}
+
+/* --- Reply section footer ---------------------------- */
+
+.reply-section-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 2.5rem;
+}
+
+.reply-section-footer .send-btn {
+  margin-top: 0;
+}
+
+.write-back-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--ink-meta);
+  font-family: var(--font-literary-ui);
+  font-style: italic;
+  font-size: 1rem;
+  padding: 0.55rem 1.8rem;
+  cursor: pointer;
+  letter-spacing: 0.01em;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+
+.write-back-btn:hover {
+  border-color: var(--ink-warm);
+  color: var(--ink);
+  background: rgba(132, 89, 43, 0.04);
+}
 
 .reply-paper {
   padding: 3rem 3.5rem 3.5rem;

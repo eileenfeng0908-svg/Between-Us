@@ -98,22 +98,16 @@
 
     <!-- Reply -->
     <section id="replySection" class="hidden">
-      <div class="stationery reply-paper">
-        <div class="reply-header">
-          <div class="reply-address-block">
-            <span id="replyTo"></span>
-            <span id="replyFrom"></span>
-          </div>
-          <div class="reply-date-line" id="replyDate"></div>
-        </div>
-        <div class="reply-salutation" id="replySalutation"></div>
-        <div class="reply-body" id="replyBody"></div>
-        <div class="reply-sig" id="replySig"></div>
-        <div class="typing-skip hidden" id="typingSkip">
-          <span>Press Space to skip</span>
-          <button id="skipTypingBtn" type="button">Skip</button>
-        </div>
+      <!-- Thread: sent letters and replies appended dynamically -->
+      <div id="threadContainer" class="thread-container"></div>
+
+      <!-- Typing skip (tracks the currently-typing reply card) -->
+      <div class="typing-skip hidden" id="typingSkip">
+        <span>Press Space to skip</span>
+        <button id="skipTypingBtn" type="button">Skip</button>
       </div>
+
+      <!-- Read aloud (always tracks the latest reply) -->
       <div class="read-letter" id="currentReadControls">
         <p class="read-letter-label">Read this letter in a voice</p>
         <div class="read-letter-options">
@@ -145,7 +139,24 @@
         <p class="read-letter-status" id="readLetterStatus" role="status"></p>
         <audio class="letter-audio hidden" id="letterAudio" controls preload="none"></audio>
       </div>
-      <button class="send-btn secondary" id="writeAnotherBtn">Write another letter</button>
+
+      <!-- Write back compose (shown when "Write back" is clicked) -->
+      <div id="writeBackCompose" class="write-back-compose hidden">
+        <div class="stationery write-back-stationery">
+          <div class="write-back-header">
+            <span class="field-label">To</span>
+            <span id="writeBackTo" class="write-back-to"></span>
+          </div>
+          <textarea id="writeBackBody" class="letter-textarea" placeholder="Continue your letter…"></textarea>
+        </div>
+        <button class="send-btn" id="writeBackSendBtn">Send this letter</button>
+      </div>
+
+      <!-- Footer actions -->
+      <div class="reply-section-footer">
+        <button class="write-back-btn hidden" id="writeBackBtn">Write back</button>
+        <button class="send-btn secondary" id="writeAnotherBtn">Write another letter</button>
+      </div>
     </section>
 
     <!-- Archive -->
