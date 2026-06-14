@@ -312,9 +312,12 @@ async function createOpenAISpeech(text, voice, emotion) {
   return Buffer.from(await response.arrayBuffer());
 }
 
-const PORT = process.env.PORT || 3000;
-const HOST = process.env.HOST || '127.0.0.1';
+if (process.env.VERCEL !== '1') {
+  const PORT = process.env.PORT || 3000;
+  const HOST = process.env.HOST || '127.0.0.1';
+  app.listen(PORT, HOST, () => {
+    console.log(`Between Us — http://localhost:${PORT}`);
+  });
+}
 
-app.listen(PORT, HOST, () => {
-  console.log(`Between Us — http://localhost:${PORT}`);
-});
+export default app;
