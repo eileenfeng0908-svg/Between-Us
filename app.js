@@ -253,6 +253,15 @@ function handleSend() {
       language,
     });
     displayReply(reply);
+
+    sendingCaption.textContent = 'A letter has returned.';
+    sendingCaption.style.opacity = '1';
+
+    await new Promise(resolve => {
+      sendAnimationTimers.push(setTimeout(resolve, 1600));
+    });
+    if (run !== sendRun) return;
+
     showSection('reply');
     sendAbortController = null;
   });
@@ -272,43 +281,46 @@ async function fetchReply({ to, userName, text, voiceRef, language, signal }) {
 // ---- Animation sequence ----------------------------------------------
 
 function resetAnimations() {
-  animLetter.classList.remove('departing');
+  animLetter.classList.remove('departing', 'folding');
   animLetter.classList.remove('hidden');
   animEnvelope.classList.remove('appearing', 'departing');
   animEnvelope.classList.add('hidden');
-  sendingCaption.textContent = 'Your letter is on its way…';
+  sendingCaption.textContent = '';
   sendingCaption.style.opacity = '0';
   void animLetter.offsetWidth;
 }
 
 function runSendAnimation(onComplete) {
   sendAnimationTimers.push(setTimeout(() => {
+    sendingCaption.textContent = 'Folding your letter…';
     sendingCaption.style.opacity = '1';
-  }, 400));
+  }, 300));
 
   sendAnimationTimers.push(setTimeout(() => {
-    animLetter.classList.add('departing');
-  }, 700));
+    animLetter.classList.add('folding');
+  }, 900));
 
   sendAnimationTimers.push(setTimeout(() => {
     animLetter.classList.add('hidden');
     animEnvelope.classList.remove('hidden');
     void animEnvelope.offsetWidth;
     animEnvelope.classList.add('appearing');
-  }, 1350));
+    sendingCaption.style.opacity = '0';
+  }, 1600));
+
+  sendAnimationTimers.push(setTimeout(() => {
+    sendingCaption.textContent = 'Sending your letter…';
+    sendingCaption.style.opacity = '1';
+  }, 2000));
 
   sendAnimationTimers.push(setTimeout(() => {
     animEnvelope.classList.remove('appearing');
     void animEnvelope.offsetWidth;
     animEnvelope.classList.add('departing');
     sendingCaption.style.opacity = '0';
-    sendAnimationTimers.push(setTimeout(() => {
-      sendingCaption.textContent = 'Delivered.';
-      sendingCaption.style.opacity = '1';
-    }, 620));
-  }, 2400));
+  }, 2900));
 
-  sendAnimationTimers.push(setTimeout(onComplete, 3800));
+  sendAnimationTimers.push(setTimeout(onComplete, 3600));
 }
 
 function cancelPendingSend() {
