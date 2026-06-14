@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Between Us</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Lato:wght@300;400&family=LXGW+WenKai&family=Noto+Serif+SC:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+
+    <header class="site-header">
+      <h1 class="site-title">
+        <button class="home-btn" id="homeBtn" type="button">Between Us</button>
+      </h1>
+      <button class="nav-btn" id="archiveToggle">Letters</button>
+    </header>
+
+    <!-- Name (first visit only) -->
+    <section id="nameSection" class="hidden">
+      <div class="name-prompt">
+        <p class="name-intro">Before your first letter —</p>
+        <label class="name-question" for="nameInput">What should we call you?</label>
+        <input
+          id="nameInput"
+          class="name-input"
+          type="text"
+          placeholder="Your name"
+          autocomplete="given-name"
+        >
+        <button class="send-btn" id="nameBtn">Begin</button>
+      </div>
+    </section>
+
+    <!-- Compose -->
+    <section id="composeSection" class="hidden">
+      <div class="stationery">
+        <div class="stationery-to-row">
+          <label class="field-label" for="recipientInput">To</label>
+          <input
+            id="recipientInput"
+            class="field-input"
+            type="text"
+            placeholder="My Future Self, Someone I Miss, The Ocean, A Teacher…"
+            autocomplete="off"
+          >
+        </div>
+        <textarea
+          id="letterBody"
+          class="letter-textarea"
+          placeholder="Place your letter here…"
+        ></textarea>
+        <details class="voice-ref">
+          <summary class="voice-ref-toggle">Voice Reference <span class="optional-tag">Optional</span></summary>
+          <div class="voice-ref-body">
+            <p class="voice-ref-desc">Paste a few lines of their writing to help preserve their voice.</p>
+            <textarea id="voiceRef" class="voice-textarea" placeholder="A sentence or two is enough…"></textarea>
+          </div>
+        </details>
+      </div>
+      <label class="reply-language" for="replyLanguage">
+        <span>Reply language</span>
+        <select id="replyLanguage">
+          <option value="auto" selected>Auto</option>
+          <option value="english">English</option>
+          <option value="chinese">中文</option>
+        </select>
+      </label>
+      <button class="send-btn" id="sendBtn">Send this letter</button>
+    </section>
+
+    <!-- Sending animation -->
+    <section id="sendingSection" class="hidden">
+      <div class="sending-stage">
+        <div id="animLetter" class="anim-letter">
+          <div class="letter-line"></div>
+          <div class="letter-line"></div>
+          <div class="letter-line"></div>
+          <div class="letter-line short"></div>
+        </div>
+        <div id="animEnvelope" class="anim-envelope hidden">
+          <div class="env-card loading-envelope">
+            <div class="env-lid"></div>
+            <div class="env-letter-edge" aria-hidden="true"></div>
+            <div class="env-address">
+              <div class="env-postmark">Sending…</div>
+              <div class="env-to" id="sendingEnvelopeTo"></div>
+              <div class="env-from" id="sendingEnvelopeFrom"></div>
+            </div>
+          </div>
+        </div>
+        <p class="sending-caption" id="sendingCaption">Your letter is on its way…</p>
+      </div>
+    </section>
+
+    <!-- Reply -->
+    <section id="replySection" class="hidden">
+      <div class="stationery reply-paper">
+        <div class="reply-date-line" id="replyDate"></div>
+        <div class="reply-address-block">
+          <span id="replyTo"></span>
+          <span id="replyFrom"></span>
+        </div>
+        <div class="reply-salutation" id="replySalutation"></div>
+        <div class="reply-body" id="replyBody"></div>
+        <div class="reply-sig" id="replySig"></div>
+        <div class="typing-skip hidden" id="typingSkip">
+          <span>Press Space to skip</span>
+          <button id="skipTypingBtn" type="button">Skip</button>
+        </div>
+      </div>
+      <div class="read-letter" id="currentReadControls">
+        <p class="read-letter-label">Read this letter in a voice</p>
+        <div class="read-letter-options">
+          <div class="voice-choice" role="radiogroup" aria-label="Reading voice">
+            <label>
+              <input type="radio" name="readingVoice" value="female" checked>
+              <span>Female</span>
+            </label>
+            <label>
+              <input type="radio" name="readingVoice" value="male">
+              <span>Male</span>
+            </label>
+          </div>
+          <label class="emotion-choice" for="readingEmotion">
+            <span>Feeling</span>
+            <select id="readingEmotion">
+              <option value="neutral">Still</option>
+              <option value="happy">Warm</option>
+              <option value="sad">Wistful</option>
+              <option value="surprised">Bright</option>
+            </select>
+          </label>
+        </div>
+        <div class="read-letter-actions">
+          <button class="read-aloud-btn" id="readAloudBtn" type="button">Read aloud</button>
+          <button class="reading-action-btn" data-reading-action="pause" type="button" disabled>Pause</button>
+          <button class="reading-action-btn" data-reading-action="stop" type="button" disabled>Stop</button>
+        </div>
+        <p class="read-letter-status" id="readLetterStatus" role="status"></p>
+        <audio class="letter-audio hidden" id="letterAudio" controls preload="none"></audio>
+      </div>
+      <button class="send-btn secondary" id="writeAnotherBtn">Write another letter</button>
+    </section>
+
+    <!-- Archive -->
+    <section id="archiveSection" class="hidden">
+      <div class="archive-bar">
+        <h2 class="archive-heading">Letters</h2>
+        <button class="nav-btn" id="archiveClose">Back</button>
+      </div>
+      <div id="archiveList"></div>
+      <p id="archiveEmpty" class="archive-empty hidden">The archive is empty.</p>
+    </section>
+
+    <!-- Correspondence (single exchange view) -->
+    <section id="correspondenceSection" class="hidden">
+      <div class="corr-nav">
+        <button class="nav-btn" id="corrBack">← Letters</button>
+      </div>
+      <div id="corrExchange"></div>
+    </section>
+
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
