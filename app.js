@@ -7,6 +7,7 @@
 const $ = id => document.getElementById(id);
 
 const sections = {
+  auth:           $('authSection'),
   name:           $('nameSection'),
   compose:        $('composeSection'),
   sending:        $('sendingSection'),
@@ -52,6 +53,21 @@ const archiveStatus   = $('archiveStatus');
 const corrBack        = $('corrBack');
 const corrExchange    = $('corrExchange');
 
+const signInNavBtn    = $('signInNavBtn');
+const signOutBtn      = $('signOutBtn');
+const signInView      = $('signInView');
+const signUpView      = $('signUpView');
+const signInEmail     = $('signInEmail');
+const signInPassword  = $('signInPassword');
+const signInBtn       = $('signInBtn');
+const signInError     = $('signInError');
+const signUpEmail     = $('signUpEmail');
+const signUpPassword  = $('signUpPassword');
+const signUpBtn       = $('signUpBtn');
+const signUpError     = $('signUpError');
+const goToSignUp      = $('goToSignUp');
+const goToSignIn      = $('goToSignIn');
+
 // ---- Persistence keys ------------------------------------------------
 // Username: sessionStorage so it doesn't persist on shared devices.
 // Language: localStorage — it's a UI preference, not personal content.
@@ -59,6 +75,10 @@ const corrExchange    = $('corrExchange');
 
 const USER_KEY     = 'betweenus_username';
 const LANGUAGE_KEY = 'betweenus_reply_language';
+const SESSION_KEY  = 'betweenus_session';
+
+let currentUser        = null;
+let currentAccessToken = null;
 
 let currentReplyText = '';
 let replyTypingTimer = null;
@@ -98,8 +118,7 @@ function showSection(name, scrollBehavior = 'auto') {
 
 // ---- Init ------------------------------------------------------------
 
-function init() {
-  // Clear any letter data left by older versions of this app
+async function init() {
   try {
     localStorage.removeItem('letterback_v2');
     localStorage.removeItem('letterback_username');
@@ -110,6 +129,14 @@ function init() {
     () => currentReplyText,
   );
   replyLanguage.value = localStorage.getItem(LANGUAGE_KEY) || 'auto';
+
+  await restoreSession();
+
+  if (!currentUser) {
+    showSection('auth');
+    setTimeout(() => signInEmail.focus(), 50);
+    return;
+  }
 
   if (!getUserName()) {
     showSection('name');
@@ -135,7 +162,10 @@ nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') handleNameSu
 // ---- Event listeners -------------------------------------------------
 
 sendBtn.addEventListener('click', handleSend);
-homeBtn.addEventListener('click', resetToFreshDesk);
+homeBtn.addEventListener('click', () => {
+  if (!currentUser) { showSection('auth'); return; }
+  resetToFreshDesk();
+});
 replyLanguage.addEventListener('change', () => {
   localStorage.setItem(LANGUAGE_KEY, replyLanguage.value);
 });
@@ -147,10 +177,44 @@ writeBackBtn.addEventListener('click', handleWriteBack);
 writeBackSendBtn.addEventListener('click', handleWriteBackSend);
 
 archiveToggle.addEventListener('click', () => {
+  if (!currentUser) { showSection('auth'); return; }
   cancelCorrespondenceOpening();
   renderArchive();
   showSection('archive');
 });
+
+// ---- Auth event listeners --------------------------------------------
+
+signInNavBtn.addEventListener('click', () => {
+  signUpView.classList.add('hidden');
+  signInView.classList.remove('hidden');
+  showSection('auth');
+  setTimeout(() => signInEmail.focus(), 50);
+});
+
+signOutBtn.addEventListener('click', handleSignOut);
+
+goToSignUp.addEventListener('click', () => {
+  signInView.classList.add('hidden');
+  signUpView.classList.remove('hidden');
+  signUpError.classList.add('hidden');
+  setTimeout(() => signUpEmail.focus(), 50);
+});
+
+goToSignIn.addEventListener('click', () => {
+  signUpView.classList.add('hidden');
+  signInView.classList.remove('hidden');
+  signInError.classList.add('hidden');
+  setTimeout(() => signInEmail.focus(), 50);
+});
+
+signInBtn.addEventListener('click', handleSignIn);
+signInEmail.addEventListener('keydown',    e => { if (e.key === 'Enter') signInPassword.focus(); });
+signInPassword.addEventListener('keydown', e => { if (e.key === 'Enter') handleSignIn(); });
+
+signUpBtn.addEventListener('click', handleSignUp);
+signUpEmail.addEventListener('keydown',    e => { if (e.key === 'Enter') signUpPassword.focus(); });
+signUpPassword.addEventListener('keydown', e => { if (e.key === 'Enter') handleSignUp(); });
 
 archiveClose.addEventListener('click', () => {
   cancelCorrespondenceOpening();
@@ -163,6 +227,197 @@ corrBack.addEventListener('click', () => {
   renderArchive();
   showSection('archive');
 });
+
+// ---- Auth functions --------------------------------------------------
+
+function setAuthState(user, accessToken, refreshToken) {
+  currentUser        = user;
+  currentAccessToken = accessToken;
+  if (refreshToken) {
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ refresh_token: refreshToken }));
+  }
+  signInNavBtn.classList.add('hidden');
+  signOutBtn.classList.remove('hidden');
+  archiveToggle.classList.remove('hidden');
+}
+
+function clearAuthState() {
+  currentUser        = null;
+  currentAccessToken = null;
+  localStorage.removeItem(SESSION_KEY);
+  sessionStorage.removeItem(USER_KEY);
+  signInNavBtn.classList.remove('hidden');
+  signOutBtn.classList.add('hidden');
+  archiveToggle.classList.add('hidden');
+}
+
+async function restoreSession() {
+  let raw;
+  try { raw = localStorage.getItem(SESSION_KEY); } catch { return; }
+  if (!raw) return;
+  try {
+    const { refresh_token } = JSON.parse(raw);
+    if (!refresh_token) return;
+    const res = await fetch('/api/auth/refresh', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ refresh_token }),
+    });
+    if (!res.ok) { localStorage.removeItem(SESSION_KEY); return; }
+    const data = await res.json();
+    setAuthState(data.user, data.access_token, data.refresh_token);
+  } catch {
+    localStorage.removeItem(SESSION_KEY);
+  }
+}
+
+async function tryRefreshToken() {
+  let raw;
+  try { raw = localStorage.getItem(SESSION_KEY); } catch { return false; }
+  if (!raw) return false;
+  try {
+    const { refresh_token } = JSON.parse(raw);
+    if (!refresh_token) return false;
+    const res = await fetch('/api/auth/refresh', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ refresh_token }),
+    });
+    if (!res.ok) { localStorage.removeItem(SESSION_KEY); return false; }
+    const data = await res.json();
+    setAuthState(data.user, data.access_token, data.refresh_token);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function handleSignIn() {
+  const email    = signInEmail.value.trim();
+  const password = signInPassword.value;
+  if (!email || !password) {
+    showAuthError(signInError, 'Enter your email and password.');
+    return;
+  }
+  signInBtn.disabled    = true;
+  signInBtn.textContent = 'Signing in…';
+  signInError.classList.add('hidden');
+  try {
+    const res  = await fetch('/api/auth/signin', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ email, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) { showAuthError(signInError, data.error || 'Sign in failed.'); return; }
+    setAuthState(data.user, data.access_token, data.refresh_token);
+    signInEmail.value    = '';
+    signInPassword.value = '';
+    afterAuth();
+  } catch {
+    showAuthError(signInError, 'Something went wrong. Try again.');
+  } finally {
+    signInBtn.disabled    = false;
+    signInBtn.textContent = 'Sign in';
+  }
+}
+
+async function handleSignUp() {
+  const email    = signUpEmail.value.trim();
+  const password = signUpPassword.value;
+  if (!email || !password) {
+    showAuthError(signUpError, 'Enter an email and password.');
+    return;
+  }
+  if (password.length < 6) {
+    showAuthError(signUpError, 'Password must be at least 6 characters.');
+    return;
+  }
+  signUpBtn.disabled    = true;
+  signUpBtn.textContent = 'Creating account…';
+  signUpError.classList.add('hidden');
+  try {
+    const res  = await fetch('/api/auth/signup', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ email, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) { showAuthError(signUpError, data.error || 'Sign up failed.'); return; }
+    if (data.confirmationRequired) {
+      signUpError.textContent = 'Check your email for a confirmation link, then sign in.';
+      signUpError.classList.remove('hidden');
+      signUpError.classList.add('is-notice');
+      return;
+    }
+    setAuthState(data.user, data.access_token, data.refresh_token);
+    signUpEmail.value    = '';
+    signUpPassword.value = '';
+    afterAuth();
+  } catch {
+    showAuthError(signUpError, 'Something went wrong. Try again.');
+  } finally {
+    signUpBtn.disabled    = false;
+    signUpBtn.textContent = 'Create account';
+  }
+}
+
+async function handleSignOut() {
+  if (currentAccessToken) {
+    fetch('/api/auth/signout', {
+      method:  'POST',
+      headers: { Authorization: `Bearer ${currentAccessToken}` },
+    }).catch(() => {});
+  }
+  cancelPendingSend();
+  cancelCorrespondenceOpening();
+  stopReplyTyping();
+  if (activeReading) stopReading(activeReading, true);
+  resetReading();
+  resetAnimations();
+
+  recipientInput.value = '';
+  letterBody.value     = '';
+  voiceRef.value       = '';
+  voiceRef.closest('details')?.removeAttribute('open');
+
+  threadContainer.innerHTML = '';
+  conversationThread = [];
+  currentConversation = { to: '', userName: '', language: '', voiceRef: '' };
+  writeBackCompose.classList.add('hidden');
+  writeBackCompose.classList.remove('entering');
+  writeBackBtn.classList.add('hidden');
+  writeBackBody.value = '';
+  sections.reply.classList.remove('no-entry-anim');
+  typingSkip.classList.add('hidden');
+  corrExchange.innerHTML = '';
+
+  clearAuthState();
+
+  // Reset auth forms to sign-in view
+  signUpView.classList.add('hidden');
+  signInView.classList.remove('hidden');
+  signInError.classList.add('hidden');
+  signUpError.classList.add('hidden');
+  signUpError.classList.remove('is-notice');
+
+  showSection('auth');
+  setTimeout(() => signInEmail.focus(), 50);
+}
+
+function afterAuth() {
+  if (!getUserName()) {
+    showSection('name');
+    setTimeout(() => nameInput.focus(), 50);
+  } else {
+    showSection('compose');
+  }
+}
+
+function showAuthError(el, msg) {
+  el.textContent = msg;
+  el.classList.remove('hidden', 'is-notice');
+}
 
 function resetToFreshDesk() {
   cancelPendingSend();
@@ -902,14 +1157,17 @@ function extractPreview(body) {
 // or missing credentials so the archive never goes blank mid-session.
 
 async function saveToArchive(entry) {
-  // Always write to session db first so the archive works immediately.
   await BetweenUsDB.saveLetter(entry);
 
-  // Also persist to Supabase; non-fatal if unavailable.
+  if (!currentAccessToken) return;
+
   try {
     const res = await fetch('/api/letters', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method:  'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${currentAccessToken}`,
+      },
       body: JSON.stringify({
         prompt:    entry.original,
         reply:     entry.replyBody,
@@ -919,6 +1177,7 @@ async function saveToArchive(entry) {
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       console.error('[Archive] Save failed:', res.status, body.error || '');
+      if (res.status === 401) await tryRefreshToken();
     }
   } catch (err) {
     console.error('[Archive] Save fetch error:', err.message);
@@ -926,17 +1185,32 @@ async function saveToArchive(entry) {
 }
 
 async function loadArchive() {
-  // Try Supabase first (returns historical letters across sessions).
+  if (!currentAccessToken) {
+    return { letters: await BetweenUsDB.loadLetters(), storageError: null };
+  }
+
   try {
-    const res = await fetch('/api/letters');
+    const res = await fetch('/api/letters', {
+      headers: { 'Authorization': `Bearer ${currentAccessToken}` },
+    });
+
     if (res.ok) {
       const rows = await res.json();
       if (Array.isArray(rows)) {
         return { letters: rows.map(mapArchiveRow), storageError: null };
       }
     }
+
+    if (res.status === 401) {
+      const refreshed = await tryRefreshToken();
+      if (refreshed) return loadArchive();
+      clearAuthState();
+      showSection('auth');
+      return { letters: [], storageError: null };
+    }
+
     const body = await res.json().catch(() => ({}));
-    const msg = body.error || `Server returned ${res.status}`;
+    const msg  = body.error || `Server returned ${res.status}`;
     console.error('[Archive] Cloud fetch failed:', msg);
     return { letters: await BetweenUsDB.loadLetters(), storageError: msg };
   } catch (err) {
@@ -1167,4 +1441,7 @@ function esc(str) {
 
 // ---- Start -----------------------------------------------------------
 
-init();
+init().catch(err => {
+  console.error('Startup error:', err);
+  showSection('auth');
+});

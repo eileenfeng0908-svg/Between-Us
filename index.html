@@ -16,8 +16,51 @@
       <h1 class="site-title">
         <button class="home-btn" id="homeBtn" type="button">Between Us</button>
       </h1>
-      <button class="nav-btn" id="archiveToggle">Letters</button>
+      <nav class="header-right">
+        <button class="nav-btn hidden" id="archiveToggle">Letters</button>
+        <button class="nav-btn hidden" id="signOutBtn">Sign out</button>
+        <button class="nav-btn" id="signInNavBtn">Sign in</button>
+      </nav>
     </header>
+
+    <!-- Auth (sign in / sign up) -->
+    <section id="authSection" class="hidden">
+      <div class="stationery auth-stationery">
+
+        <!-- Sign in -->
+        <div id="signInView">
+          <p class="auth-intro">Sign in to read your letters.</p>
+          <div class="auth-row">
+            <label class="field-label" for="signInEmail">Email</label>
+            <input id="signInEmail" class="field-input" type="email" placeholder="your@email.com" autocomplete="email">
+          </div>
+          <div class="auth-row">
+            <label class="field-label" for="signInPassword">Password</label>
+            <input id="signInPassword" class="field-input" type="password" placeholder="Password" autocomplete="current-password">
+          </div>
+          <p class="auth-error hidden" id="signInError"></p>
+          <button class="send-btn" id="signInBtn">Sign in</button>
+          <p class="auth-toggle-row">No account? <button class="auth-switch-btn" id="goToSignUp" type="button">Create one</button></p>
+        </div>
+
+        <!-- Sign up -->
+        <div id="signUpView" class="hidden">
+          <p class="auth-intro">Create an account to keep your letters.</p>
+          <div class="auth-row">
+            <label class="field-label" for="signUpEmail">Email</label>
+            <input id="signUpEmail" class="field-input" type="email" placeholder="your@email.com" autocomplete="email">
+          </div>
+          <div class="auth-row">
+            <label class="field-label" for="signUpPassword">Password</label>
+            <input id="signUpPassword" class="field-input" type="password" placeholder="At least 6 characters" autocomplete="new-password">
+          </div>
+          <p class="auth-error hidden" id="signUpError"></p>
+          <button class="send-btn" id="signUpBtn">Create account</button>
+          <p class="auth-toggle-row">Have an account? <button class="auth-switch-btn" id="goToSignIn" type="button">Sign in</button></p>
+        </div>
+
+      </div>
+    </section>
 
     <!-- Name (first visit only) -->
     <section id="nameSection" class="hidden">

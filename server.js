@@ -63,17 +63,86 @@ const EMOTIONS = {
   },
 };
 
-app.post('/api/letters', async (req, res) => {
+// ---- Auth helpers ---------------------------------------------------
+
+function makeUserClient(token) {
+  return createClient(supabaseUrl, supabaseKey, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+    auth:   { persistSession: false, autoRefreshToken: false },
+  });
+}
+
+async function requireAuth(req, res, next) {
+  const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim();
+  if (!token) return res.status(401).json({ error: 'Authentication required' });
+  if (!supabase) return res.status(503).json({ error: 'Storage not configured' });
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+  if (error || !user) return res.status(401).json({ error: 'Invalid or expired token' });
+  req.user       = user;
+  req.accessToken = token;
+  next();
+}
+
+// ---- Auth routes ----------------------------------------------------
+
+app.post('/api/auth/signup', async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
+  if (!supabase) return res.status(503).json({ error: 'Storage not configured' });
+  const { data, error } = await supabase.auth.signUp({ email, password });
+  if (error) return res.status(400).json({ error: error.message });
+  if (!data.session) return res.json({ confirmationRequired: true });
+  res.json({
+    access_token:  data.session.access_token,
+    refresh_token: data.session.refresh_token,
+    user:          { id: data.user.id, email: data.user.email },
+  });
+});
+
+app.post('/api/auth/signin', async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
+  if (!supabase) return res.status(503).json({ error: 'Storage not configured' });
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({
+    access_token:  data.session.access_token,
+    refresh_token: data.session.refresh_token,
+    user:          { id: data.user.id, email: data.user.email },
+  });
+});
+
+app.post('/api/auth/signout', async (req, res) => {
+  const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim();
+  if (token && supabase) {
+    try { await makeUserClient(token).auth.signOut(); } catch { /* ignore */ }
+  }
+  res.json({ ok: true });
+});
+
+app.post('/api/auth/refresh', async (req, res) => {
+  const { refresh_token } = req.body;
+  if (!refresh_token) return res.status(400).json({ error: 'Refresh token required' });
+  if (!supabase) return res.status(503).json({ error: 'Storage not configured' });
+  const { data, error } = await supabase.auth.refreshSession({ refresh_token });
+  if (error) return res.status(401).json({ error: error.message });
+  res.json({
+    access_token:  data.session.access_token,
+    refresh_token: data.session.refresh_token,
+    user:          { id: data.user.id, email: data.user.email },
+  });
+});
+
+// ---- Letter routes (auth required) ----------------------------------
+
+app.post('/api/letters', requireAuth, async (req, res) => {
   const { prompt, reply, recipient } = req.body;
   if (!prompt || !reply || !recipient) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
-  if (!supabase) {
-    return res.status(503).json({ error: 'Storage not configured' });
-  }
-  const { data, error } = await supabase
+  const { data, error } = await makeUserClient(req.accessToken)
     .from('letters')
-    .insert({ prompt, reply, recipient })
+    .insert({ prompt, reply, recipient, user_id: req.user.id })
     .select('id, created_at')
     .single();
   if (error) {
@@ -83,11 +152,8 @@ app.post('/api/letters', async (req, res) => {
   res.json(data);
 });
 
-app.get('/api/letters', async (req, res) => {
-  if (!supabase) {
-    return res.status(503).json({ error: 'Storage not configured' });
-  }
-  const { data, error } = await supabase
+app.get('/api/letters', requireAuth, async (req, res) => {
+  const { data, error } = await makeUserClient(req.accessToken)
     .from('letters')
     .select('id, created_at, prompt, reply, recipient')
     .order('created_at', { ascending: false });

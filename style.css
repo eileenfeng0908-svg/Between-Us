@@ -96,6 +96,12 @@ select:focus-visible {
 
 /* --- Header ------------------------------------------ */
 
+.header-right {
+  display: flex;
+  align-items: baseline;
+  gap: 1.6rem;
+}
+
 .site-header {
   display: flex;
   align-items: baseline;
@@ -145,6 +151,64 @@ select:focus-visible {
   transition: color 0.2s;
 }
 .nav-btn:hover { color: var(--amber); }
+
+/* --- Auth section ------------------------------------ */
+
+.auth-stationery {
+  max-width: 420px;
+  margin: 2rem auto;
+}
+
+.auth-intro {
+  font-family: var(--font-literary-ui);
+  font-style: italic;
+  color: var(--ink-warm);
+  font-size: 1.05rem;
+  margin-bottom: 2rem;
+}
+
+.auth-row {
+  display: flex;
+  align-items: baseline;
+  gap: 1.5rem;
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 0.7rem;
+  margin-bottom: 1.2rem;
+}
+
+.auth-error {
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  letter-spacing: 0.03em;
+  color: #8a2f18;
+  margin-bottom: 0.8rem;
+}
+
+.auth-error.is-notice {
+  color: var(--ink-meta);
+}
+
+.auth-toggle-row {
+  text-align: center;
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  color: var(--ink-meta);
+  margin-top: 1.4rem;
+}
+
+.auth-switch-btn {
+  background: none;
+  border: none;
+  color: var(--amber);
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  padding: 0;
+}
 
 /* --- Name prompt ------------------------------------- */
 
