@@ -895,14 +895,46 @@ function extractPreview(body) {
   return sentence.length > 88 ? sentence.slice(0, 88).trimEnd() + '…' : sentence;
 }
 
-// ---- Archive (session memory — see db.js) ---------------------------
+// ---- Archive (Supabase via /api/letters) ----------------------------
 
 async function saveToArchive(entry) {
-  await BetweenUsDB.saveLetter(entry);
+  try {
+    await fetch('/api/letters', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt:    entry.original,
+        reply:     entry.replyBody,
+        recipient: entry.to,
+      }),
+    });
+  } catch {
+    // Non-fatal — archive save failure should not interrupt the letter experience
+  }
 }
 
 async function loadArchive() {
-  return BetweenUsDB.loadLetters();
+  try {
+    const res = await fetch('/api/letters');
+    if (!res.ok) return [];
+    const rows = await res.json();
+    return rows.map(row => ({
+      id:              row.id,
+      date:            new Date(row.created_at).toLocaleDateString('en-US', {
+                         year: 'numeric', month: 'long', day: 'numeric',
+                       }),
+      to:              row.recipient,
+      userName:        getUserName(),
+      original:        row.prompt,
+      replyBody:       row.reply,
+      preview:         extractPreview(row.reply),
+      replySignature:  null,
+      replySalutation: null,
+      language:        'auto',
+    }));
+  } catch {
+    return [];
+  }
 }
 
 async function renderArchive() {

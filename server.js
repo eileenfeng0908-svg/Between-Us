@@ -1,5 +1,6 @@
 import express from 'express';
 import OpenAI from 'openai';
+import { createClient } from '@supabase/supabase-js';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import dotenv from 'dotenv';
@@ -18,6 +19,11 @@ const openai = new OpenAI({
 });
 
 const TTS_PROVIDER = process.env.TTS_PROVIDER || 'highway';
+
+// Supabase — accepts both plain and NEXT_PUBLIC_ env var names
+const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
 const VOICES = {
   highway: {
@@ -56,6 +62,41 @@ const EMOTIONS = {
     openai: 'Read with light brightness and a subtle sense of wonder.',
   },
 };
+
+app.post('/api/letters', async (req, res) => {
+  const { prompt, reply, recipient } = req.body;
+  if (!prompt || !reply || !recipient) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+  if (!supabase) {
+    return res.status(503).json({ error: 'Storage not configured' });
+  }
+  const { data, error } = await supabase
+    .from('letters')
+    .insert({ prompt, reply, recipient })
+    .select('id, created_at')
+    .single();
+  if (error) {
+    console.error('Supabase insert error:', error.message);
+    return res.status(500).json({ error: 'Failed to save letter' });
+  }
+  res.json(data);
+});
+
+app.get('/api/letters', async (req, res) => {
+  if (!supabase) {
+    return res.status(503).json({ error: 'Storage not configured' });
+  }
+  const { data, error } = await supabase
+    .from('letters')
+    .select('id, created_at, prompt, reply, recipient')
+    .order('created_at', { ascending: false });
+  if (error) {
+    console.error('Supabase fetch error:', error.message);
+    return res.status(500).json({ error: 'Failed to load letters' });
+  }
+  res.json(data);
+});
 
 app.post('/reply', async (req, res) => {
   const { to, userName, text, voiceRef, language = 'auto', history = [] } = req.body;
