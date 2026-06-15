@@ -1209,6 +1209,18 @@ details[open] .voice-ref-toggle::before { transform: rotate(90deg); }
   color: var(--ink-warm);
 }
 
+.archive-status {
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--paper-muted);
+  padding: 0.6rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  margin-bottom: 1.5rem;
+  grid-column: 1 / -1;
+}
+
 .archive-empty {
   font-family: var(--font-literary-ui);
   font-style: italic;

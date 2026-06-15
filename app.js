@@ -47,6 +47,7 @@ const archiveToggle   = $('archiveToggle');
 const archiveClose    = $('archiveClose');
 const archiveList     = $('archiveList');
 const archiveEmpty    = $('archiveEmpty');
+const archiveStatus   = $('archiveStatus');
 
 const corrBack        = $('corrBack');
 const corrExchange    = $('corrExchange');
@@ -906,7 +907,7 @@ async function saveToArchive(entry) {
 
   // Also persist to Supabase; non-fatal if unavailable.
   try {
-    await fetch('/api/letters', {
+    const res = await fetch('/api/letters', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -915,8 +916,12 @@ async function saveToArchive(entry) {
         recipient: entry.to,
       }),
     });
-  } catch {
-    // Supabase unavailable — session db covers this session's letters.
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      console.error('[Archive] Save failed:', res.status, body.error || '');
+    }
+  } catch (err) {
+    console.error('[Archive] Save fetch error:', err.message);
   }
 }
 
@@ -927,26 +932,32 @@ async function loadArchive() {
     if (res.ok) {
       const rows = await res.json();
       if (Array.isArray(rows)) {
-        return rows.map(row => ({
-          id:              row.id,
-          date:            formatSupabaseDate(row.created_at),
-          to:              row.recipient,
-          userName:        getUserName(),
-          original:        row.prompt,
-          replyBody:       row.reply || '',
-          preview:         row.reply ? extractPreview(row.reply) : '',
-          replySignature:  null,
-          replySalutation: null,
-          language:        'auto',
-        }));
+        return { letters: rows.map(mapArchiveRow), storageError: null };
       }
     }
-  } catch {
-    // Network error or Supabase unavailable — fall through to session db.
+    const body = await res.json().catch(() => ({}));
+    const msg = body.error || `Server returned ${res.status}`;
+    console.error('[Archive] Cloud fetch failed:', msg);
+    return { letters: await BetweenUsDB.loadLetters(), storageError: msg };
+  } catch (err) {
+    console.error('[Archive] Fetch error:', err.message);
+    return { letters: await BetweenUsDB.loadLetters(), storageError: err.message };
   }
+}
 
-  // Fallback: letters saved in this browser session.
-  return BetweenUsDB.loadLetters();
+function mapArchiveRow(row) {
+  return {
+    id:              row.id,
+    date:            formatSupabaseDate(row.created_at),
+    to:              row.recipient,
+    userName:        getUserName(),
+    original:        row.prompt,
+    replyBody:       row.reply || '',
+    preview:         row.reply ? extractPreview(row.reply) : '',
+    replySignature:  null,
+    replySalutation: null,
+    language:        'auto',
+  };
 }
 
 function formatSupabaseDate(ts) {
@@ -960,17 +971,24 @@ function formatSupabaseDate(ts) {
 }
 
 async function renderArchive() {
-  const archive = await loadArchive();
   archiveList.innerHTML = '';
+  archiveEmpty.classList.add('hidden');
+  archiveStatus.textContent = '';
+  archiveStatus.classList.add('hidden');
 
-if (archive.length === 0) {
+  const { letters, storageError } = await loadArchive();
+
+  if (storageError) {
+    archiveStatus.textContent = 'Letter storage unavailable. Showing letters from this session only.';
+    archiveStatus.classList.remove('hidden');
+  }
+
+  if (letters.length === 0) {
     archiveEmpty.classList.remove('hidden');
     return;
   }
 
-  archiveEmpty.classList.add('hidden');
-
-  archive.forEach(entry => {
+  letters.forEach(entry => {
     const card = document.createElement('div');
     card.className = 'env-card';
     card.tabIndex = 0;
