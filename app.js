@@ -895,9 +895,16 @@ function extractPreview(body) {
   return sentence.length > 88 ? sentence.slice(0, 88).trimEnd() + '…' : sentence;
 }
 
-// ---- Archive (Supabase via /api/letters) ----------------------------
+// ---- Archive --------------------------------------------------------
+// Primary storage: Supabase (via /api/letters).
+// Fallback: session db (db.js) — always available, survives Supabase outages
+// or missing credentials so the archive never goes blank mid-session.
 
 async function saveToArchive(entry) {
+  // Always write to session db first so the archive works immediately.
+  await BetweenUsDB.saveLetter(entry);
+
+  // Also persist to Supabase; non-fatal if unavailable.
   try {
     await fetch('/api/letters', {
       method: 'POST',
@@ -909,31 +916,46 @@ async function saveToArchive(entry) {
       }),
     });
   } catch {
-    // Non-fatal — archive save failure should not interrupt the letter experience
+    // Supabase unavailable — session db covers this session's letters.
   }
 }
 
 async function loadArchive() {
+  // Try Supabase first (returns historical letters across sessions).
   try {
     const res = await fetch('/api/letters');
-    if (!res.ok) return [];
-    const rows = await res.json();
-    return rows.map(row => ({
-      id:              row.id,
-      date:            new Date(row.created_at).toLocaleDateString('en-US', {
-                         year: 'numeric', month: 'long', day: 'numeric',
-                       }),
-      to:              row.recipient,
-      userName:        getUserName(),
-      original:        row.prompt,
-      replyBody:       row.reply,
-      preview:         extractPreview(row.reply),
-      replySignature:  null,
-      replySalutation: null,
-      language:        'auto',
-    }));
+    if (res.ok) {
+      const rows = await res.json();
+      if (Array.isArray(rows)) {
+        return rows.map(row => ({
+          id:              row.id,
+          date:            formatSupabaseDate(row.created_at),
+          to:              row.recipient,
+          userName:        getUserName(),
+          original:        row.prompt,
+          replyBody:       row.reply || '',
+          preview:         row.reply ? extractPreview(row.reply) : '',
+          replySignature:  null,
+          replySalutation: null,
+          language:        'auto',
+        }));
+      }
+    }
   } catch {
-    return [];
+    // Network error or Supabase unavailable — fall through to session db.
+  }
+
+  // Fallback: letters saved in this browser session.
+  return BetweenUsDB.loadLetters();
+}
+
+function formatSupabaseDate(ts) {
+  try {
+    return new Date(ts).toLocaleDateString('en-US', {
+      year: 'numeric', month: 'long', day: 'numeric',
+    });
+  } catch {
+    return ts || '';
   }
 }
 
