@@ -53,6 +53,13 @@ const archiveStatus   = $('archiveStatus');
 const corrBack        = $('corrBack');
 const corrExchange    = $('corrExchange');
 
+const archiveGuestState  = $('archiveGuestState');
+const archiveSignInBtn   = $('archiveSignInBtn');
+const archiveSignUpBtn   = $('archiveSignUpBtn');
+const guestSavePrompt    = $('guestSavePrompt');
+const guestSaveSignInBtn = $('guestSaveSignInBtn');
+const authBackBtn        = $('authBackBtn');
+
 const signInNavBtn    = $('signInNavBtn');
 const signOutBtn      = $('signOutBtn');
 const signInView      = $('signInView');
@@ -79,6 +86,9 @@ const SESSION_KEY  = 'betweenus_session';
 
 let currentUser        = null;
 let currentAccessToken = null;
+let pendingSaveEntry   = null;
+let authIntent         = null;
+let lastReceivedEntry  = null;
 
 let currentReplyText = '';
 let replyTypingTimer = null;
@@ -132,12 +142,6 @@ async function init() {
 
   await restoreSession();
 
-  if (!currentUser) {
-    showSection('auth');
-    setTimeout(() => signInEmail.focus(), 50);
-    return;
-  }
-
   if (!getUserName()) {
     showSection('name');
     setTimeout(() => nameInput.focus(), 50);
@@ -163,7 +167,6 @@ nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') handleNameSu
 
 sendBtn.addEventListener('click', handleSend);
 homeBtn.addEventListener('click', () => {
-  if (!currentUser) { showSection('auth'); return; }
   resetToFreshDesk();
 });
 replyLanguage.addEventListener('change', () => {
@@ -177,7 +180,6 @@ writeBackBtn.addEventListener('click', handleWriteBack);
 writeBackSendBtn.addEventListener('click', handleWriteBackSend);
 
 archiveToggle.addEventListener('click', () => {
-  if (!currentUser) { showSection('auth'); return; }
   cancelCorrespondenceOpening();
   renderArchive();
   showSection('archive');
@@ -186,8 +188,10 @@ archiveToggle.addEventListener('click', () => {
 // ---- Auth event listeners --------------------------------------------
 
 signInNavBtn.addEventListener('click', () => {
+  authIntent = null;
   signUpView.classList.add('hidden');
   signInView.classList.remove('hidden');
+  signInError.classList.add('hidden');
   showSection('auth');
   setTimeout(() => signInEmail.focus(), 50);
 });
@@ -205,6 +209,46 @@ goToSignIn.addEventListener('click', () => {
   signUpView.classList.add('hidden');
   signInView.classList.remove('hidden');
   signInError.classList.add('hidden');
+  setTimeout(() => signInEmail.focus(), 50);
+});
+
+authBackBtn.addEventListener('click', () => {
+  authIntent = null;
+  pendingSaveEntry = null;
+  if (!getUserName()) {
+    showSection('name');
+    setTimeout(() => nameInput.focus(), 50);
+  } else {
+    showSection('compose');
+  }
+});
+
+archiveSignInBtn.addEventListener('click', () => {
+  authIntent = 'archive';
+  signUpView.classList.add('hidden');
+  signInView.classList.remove('hidden');
+  signInError.classList.add('hidden');
+  showSection('auth');
+  setTimeout(() => signInEmail.focus(), 50);
+});
+
+archiveSignUpBtn.addEventListener('click', () => {
+  authIntent = 'archive';
+  signInView.classList.add('hidden');
+  signUpView.classList.remove('hidden');
+  signUpError.classList.add('hidden');
+  signUpError.classList.remove('is-notice');
+  showSection('auth');
+  setTimeout(() => signUpEmail.focus(), 50);
+});
+
+guestSaveSignInBtn.addEventListener('click', () => {
+  pendingSaveEntry = lastReceivedEntry;
+  authIntent = 'save';
+  signUpView.classList.add('hidden');
+  signInView.classList.remove('hidden');
+  signInError.classList.add('hidden');
+  showSection('auth');
   setTimeout(() => signInEmail.focus(), 50);
 });
 
@@ -238,7 +282,7 @@ function setAuthState(user, accessToken, refreshToken) {
   }
   signInNavBtn.classList.add('hidden');
   signOutBtn.classList.remove('hidden');
-  archiveToggle.classList.remove('hidden');
+  guestSavePrompt.classList.add('hidden');
 }
 
 function clearAuthState() {
@@ -248,7 +292,6 @@ function clearAuthState() {
   sessionStorage.removeItem(USER_KEY);
   signInNavBtn.classList.remove('hidden');
   signOutBtn.classList.add('hidden');
-  archiveToggle.classList.add('hidden');
 }
 
 async function restoreSession() {
@@ -363,6 +406,10 @@ async function handleSignUp() {
 }
 
 async function handleSignOut() {
+  lastReceivedEntry = null;
+  pendingSaveEntry  = null;
+  authIntent        = null;
+
   if (currentAccessToken) {
     fetch('/api/auth/signout', {
       method:  'POST',
@@ -394,18 +441,33 @@ async function handleSignOut() {
 
   clearAuthState();
 
-  // Reset auth forms to sign-in view
+  // Reset auth forms for next visit
   signUpView.classList.add('hidden');
   signInView.classList.remove('hidden');
   signInError.classList.add('hidden');
   signUpError.classList.add('hidden');
   signUpError.classList.remove('is-notice');
 
-  showSection('auth');
-  setTimeout(() => signInEmail.focus(), 50);
+  showSection('compose');
 }
 
-function afterAuth() {
+async function afterAuth() {
+  if (authIntent === 'save' && pendingSaveEntry) {
+    const entry = pendingSaveEntry;
+    pendingSaveEntry = null;
+    authIntent = null;
+    await saveToArchive(entry);
+    renderArchive();
+    showSection('archive');
+    return;
+  }
+  if (authIntent === 'archive') {
+    authIntent = null;
+    renderArchive();
+    showSection('archive');
+    return;
+  }
+  authIntent = null;
   if (!getUserName()) {
     showSection('name');
     setTimeout(() => nameInput.focus(), 50);
@@ -420,6 +482,9 @@ function showAuthError(el, msg) {
 }
 
 function resetToFreshDesk() {
+  lastReceivedEntry = null;
+  guestSavePrompt.classList.add('hidden');
+
   cancelPendingSend();
   cancelCorrespondenceOpening();
 
@@ -635,6 +700,20 @@ function cancelPendingSend() {
 
 function displayReply(sentData, reply) {
   stopReplyTyping();
+
+  lastReceivedEntry = {
+    date:            reply.date,
+    to:              sentData.to,
+    userName:        sentData.userName,
+    original:        sentData.body,
+    preview:         extractPreview(reply.body),
+    replyBody:       reply.body,
+    replySignature:  reply.signature,
+    replySalutation: reply.salutation,
+    language:        currentConversation.language,
+  };
+  guestSavePrompt.classList.add('hidden');
+
   const replyLang = containsChinese(reply.body) ? 'zh-CN' : 'en';
   activeReplyBody = reply.body;
   currentReplyText = `${reply.salutation}\n\n${reply.body}\n\n${reply.signature}`;
@@ -757,6 +836,10 @@ function finishReplyTyping(text) {
     setTimeout(() => {
       writeBackBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }, 500);
+  }
+
+  if (!currentUser && lastReceivedEntry) {
+    guestSavePrompt.classList.remove('hidden');
   }
 }
 
@@ -1205,8 +1288,7 @@ async function loadArchive() {
       const refreshed = await tryRefreshToken();
       if (refreshed) return loadArchive();
       clearAuthState();
-      showSection('auth');
-      return { letters: [], storageError: null };
+      return { letters: await BetweenUsDB.loadLetters(), storageError: null };
     }
 
     const body = await res.json().catch(() => ({}));
@@ -1249,6 +1331,12 @@ async function renderArchive() {
   archiveEmpty.classList.add('hidden');
   archiveStatus.textContent = '';
   archiveStatus.classList.add('hidden');
+
+  if (!currentUser) {
+    archiveGuestState.classList.remove('hidden');
+    return;
+  }
+  archiveGuestState.classList.add('hidden');
 
   const { letters, storageError } = await loadArchive();
 
@@ -1443,5 +1531,5 @@ function esc(str) {
 
 init().catch(err => {
   console.error('Startup error:', err);
-  showSection('auth');
+  showSection('compose');
 });

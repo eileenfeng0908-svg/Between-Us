@@ -17,7 +17,7 @@
         <button class="home-btn" id="homeBtn" type="button">Between Us</button>
       </h1>
       <nav class="header-right">
-        <button class="nav-btn hidden" id="archiveToggle">Letters</button>
+        <button class="nav-btn" id="archiveToggle">Letters</button>
         <button class="nav-btn hidden" id="signOutBtn">Sign out</button>
         <button class="nav-btn" id="signInNavBtn">Sign in</button>
       </nav>
@@ -29,7 +29,7 @@
 
         <!-- Sign in -->
         <div id="signInView">
-          <p class="auth-intro">Sign in to read your letters.</p>
+          <p class="auth-intro">Welcome back.</p>
           <div class="auth-row">
             <label class="field-label" for="signInEmail">Email</label>
             <input id="signInEmail" class="field-input" type="email" placeholder="your@email.com" autocomplete="email">
@@ -58,6 +58,10 @@
           <button class="send-btn" id="signUpBtn">Create account</button>
           <p class="auth-toggle-row">Have an account? <button class="auth-switch-btn" id="goToSignIn" type="button">Sign in</button></p>
         </div>
+
+        <p class="auth-back-row">
+          <button class="auth-back-btn" id="authBackBtn" type="button">← Continue without signing in</button>
+        </p>
 
       </div>
     </section>
@@ -153,6 +157,12 @@
       <!-- Write back button (revealed when reply is ready) -->
       <button class="write-back-btn hidden" id="writeBackBtn">Write back</button>
 
+      <!-- Guest save prompt (shown after reply for signed-out users) -->
+      <div class="guest-save-prompt hidden" id="guestSavePrompt">
+        <p>Sign in to keep this letter in your archive.</p>
+        <button class="auth-switch-btn" id="guestSaveSignInBtn" type="button">Sign in →</button>
+      </div>
+
       <!-- Write back compose (shown when "Write back" is clicked) -->
       <div id="writeBackCompose" class="write-back-compose hidden">
         <div class="stationery write-back-stationery">
@@ -208,6 +218,16 @@
         <h2 class="archive-heading">Letters</h2>
         <button class="nav-btn" id="archiveClose">Back</button>
       </div>
+
+      <!-- Guest state: shown when not signed in -->
+      <div id="archiveGuestState" class="archive-guest hidden">
+        <p class="archive-guest-msg">Your archive is available when you sign in.</p>
+        <div class="archive-guest-actions">
+          <button class="send-btn" id="archiveSignInBtn">Sign in</button>
+          <button class="send-btn secondary" id="archiveSignUpBtn">Create account</button>
+        </div>
+      </div>
+
       <p class="archive-status hidden" id="archiveStatus"></p>
       <div id="archiveList"></div>
       <div id="archiveEmpty" class="archive-empty hidden">

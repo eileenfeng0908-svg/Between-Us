@@ -210,6 +210,26 @@ select:focus-visible {
   padding: 0;
 }
 
+.auth-back-row {
+  text-align: center;
+  margin-top: 2rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--rule);
+}
+
+.auth-back-btn {
+  background: none;
+  border: none;
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  color: var(--ink-meta);
+  cursor: pointer;
+  padding: 0;
+}
+
+.auth-back-btn:hover { color: var(--ink-warm); }
+
 /* --- Name prompt ------------------------------------- */
 
 .name-prompt {
@@ -693,6 +713,25 @@ details[open] .voice-ref-toggle::before { transform: rotate(90deg); }
 }
 
 .write-back-btn:active { transform: translateY(1px); }
+
+.guest-save-prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.7rem;
+  text-align: center;
+  padding: 1.4rem 0;
+  margin-top: 0.5rem;
+  border-top: 1px solid var(--rule);
+}
+
+.guest-save-prompt p {
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  color: var(--ink-meta);
+  text-transform: uppercase;
+}
 
 .reply-paper {
   padding: 3rem 3.5rem 3.5rem;
@@ -1300,6 +1339,30 @@ details[open] .voice-ref-toggle::before { transform: rotate(90deg); }
 .archive-empty-note {
   font-size: 0.82rem;
   opacity: 0.6;
+}
+
+.archive-guest {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 3.5rem 1rem;
+  gap: 2rem;
+  grid-column: 1 / -1;
+}
+
+.archive-guest-msg {
+  font-family: var(--font-literary-ui);
+  font-style: italic;
+  color: var(--ink-warm);
+  font-size: 1.05rem;
+}
+
+.archive-guest-actions {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
 /* --- Correspondence view ----------------------------- */
